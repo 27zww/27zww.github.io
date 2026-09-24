@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>批量注册 · 右豹工具</title>
+  <style>
+    :root { color-scheme: dark; --bg: #080b10; --card: #11161f; --ink: #f2f4f7; --muted: #a5adbd; --line: #2a3442; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, "Microsoft YaHei", sans-serif; color: var(--ink); background: radial-gradient(circle at 12% 0%, #15223a, var(--bg) 45%); min-height: 100vh; }
+    main { width: min(1120px, calc(100% - 32px)); margin: 34px auto 56px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    nav a { padding: 9px 15px; border: 1px solid var(--line); border-radius: 9px; text-decoration: none; color: var(--muted); }
+    nav a[aria-current] { background: #172a49; color: #9ec5ff; border-color: #315d9b; }
+    h1 { font-size: clamp(26px, 4vw, 38px); margin: 0 0 8px; }
+    h2 { font-size: 19px; margin: 0; }
+    p { color: var(--muted); line-height: 1.7; }
+    .card { margin-top: 20px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+    .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: 24px; }
+    label { display: block; font-weight: 650; margin-bottom: 8px; }
+    .phone-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .phone-heading label { margin: 0; }
+    .phone-heading button { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+    textarea, input, button, select { font: inherit; }
+    textarea, input { width: 100%; padding: 11px 12px; background: #0c1118; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; }
+    textarea { height: 168px; resize: none; overflow: auto; line-height: 1.6; }
+    input { width: 150px; height: 42px; letter-spacing: .18em; }
+    :focus-visible { outline: 2px solid #60a5fa; outline-offset: 3px; }
+    .hint { font-size: 13px; margin: 8px 0 0; }
+    .notice { padding: 12px 14px; margin-top: 18px; border: 1px solid #655029; color: #f6c85f; background: #282116; border-radius: 9px; font-size: 13px; line-height: 1.7; }
+    .actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button { min-height: 42px; padding: 9px 16px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #202733; cursor: pointer; }
+    button.primary { background: #2563eb; border-color: #2563eb; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .section-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+    #summary { color: var(--muted); font-size: 13px; }
+    .table-wrap { overflow: auto; max-height: 300px; border: 1px solid var(--line); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+    th { position: sticky; top: 0; background: #19212d; color: #cbd5e1; white-space: nowrap; }
+    td:first-child { width: 70px; }
+    .ready, .running { color: #93baff; } .invalid, .failed { color: #ffaaa3; } .duplicate, .uncertain { color: #f6c85f; } .success { color: #65e6a2; }
+    .token-copy { padding: 6px 10px; min-height: 34px; white-space: nowrap; }
+    .token-value { display: block; width: 280px; height: 64px; min-height: 0; padding: 8px; font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .token-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+    .token-actions button { padding: 6px 10px; min-height: 34px; font-size: 12px; }
+    #copyFallback { margin-top: 16px; }
+    #copyFallbackText { height: 130px; font: 13px/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .empty { color: var(--muted); text-align: center; height: 100px; }
+    .history-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .history-bar label { margin: 0; font-size: 14px; }
+    select { max-width: 100%; min-width: 0; width: 370px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #0c1118; color: var(--ink); }
+    #storageStatus { overflow-wrap: anywhere; }
+    #retrySave { margin-top: 8px; }
+    .rename-status { margin: 5px 0 0; font-size: 12px; }
+    details { margin-top: 18px; color: var(--muted); font-size: 13px; }
+    details summary { cursor: pointer; }
+    details label { margin-top: 12px; }
+    #legacyRecords { height: 100px; }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } .card { padding: 16px; } main { margin-top: 20px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>批量注册</h1>
+      <p>填写手机号或号码区间，使用统一验证码登录。每行一个号码或区间，重复号码自动跳过。</p>
+    </header>
+    <section class="card" aria-label="手机号与验证码">
+      <div class="grid">
+        <div>
+          <div class="phone-heading">
+            <label for="phones">手机号</label>
+            <button id="clearPhones" type="button">清空手机号</button>
+          </div>
+          <textarea id="phones" spellcheck="false" autocomplete="off" placeholder="每行填写一个手机号或起止号码区间" aria-describedby="phoneHint phoneEditHint"></textarea>
+          <p id="phoneHint" class="hint">区间包含首尾；单个区间最多 1000 个，可与单个号码混合填写，下方自动展开预览。</p>
+          <p id="phoneEditHint" class="hint">停止处理后可直接清空或修改；已开始的批次会保留在“已保存批次”中，不会删除记录和 Token。</p>
+        </div>
+        <div>
+          <label for="code">统一验证码</label>
+          <input id="code" type="password" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="请输入验证码" aria-describedby="codeHint">
+          <p id="codeHint" class="hint">使用者自行填写验证码；登录成功后，昵称修改为手机号后 4 位 + 良子。</p>
+        </div>
+      </div>
+      <div class="notice" id="connectionStatus" role="status">已接入测试环境。登录和改名请求逐条处理，间隔至少 5 秒；遇到限流暂停并遵守接口返回的等待时间。验证码错误等明确失败可手动重试一轮，已成功账号不会重复登录。新手机号是否自动注册，以接口处理为准。</div>
+      <div class="actions">
+        <button class="primary" id="start" type="button" disabled aria-describedby="connectionStatus">开始注册 / 登录</button>
+        <button id="stop" type="button" disabled>停止</button>
+        <button id="retryRateLimited" type="button" disabled>重试失败项</button>
+        <button id="retryNickname" type="button" disabled>补做 / 重试改名</button>
+        <button id="clear" type="button">新建一批（保留记录）</button>
+      </div>
+      <p id="storageStatus" class="hint" role="status">提交结果将自动保存在当前浏览器。</p>
+      <button id="retrySave" type="button" hidden>重新保存</button>
+      <p class="hint">手机号、结果和 Token 仅保存在本机当前浏览器，不写入 HTML 文件。Token 按原值保存，请勿共享浏览器数据；清理浏览器数据、换浏览器或移动文件可能无法恢复。</p>
+    </section>
+    <section class="card" aria-labelledby="resultsTitle">
+      <div class="history-bar">
+        <label for="batchHistory">已保存批次</label>
+        <select id="batchHistory"></select>
+      </div>
+      <div class="section-head">
+        <h2 id="resultsTitle">处理列表</h2>
+        <span id="summary" role="status" aria-live="polite">尚未填写手机号</span>
+        <button id="copyAllTokens" type="button" disabled>复制全部账号和 Token</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">序号</th><th scope="col">手机号</th><th scope="col">昵称</th><th scope="col">状态 / 接口提示</th><th scope="col">Token</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="5" class="empty">填写手机号后显示待处理列表</td></tr></tbody>
+        </table>
+      </div>
+      <div id="copyFallback" hidden>
+        <label for="copyFallbackText">复制内容（已选中，可按 Ctrl+C）</label>
+        <textarea id="copyFallbackText" readonly spellcheck="false"></textarea>
+      </div>
+      <details id="legacyRecovery">
+        <summary>恢复旧页面已复制的账号和 Token</summary>
+        <p>旧版未自动保存。先在旧页面点击“复制全部账号和 Token”，再到此粘贴恢复。只恢复复制到的成功记录，不发送任何接口请求。</p>
+        <label for="legacyRecords">旧页面复制内容</label>
+        <textarea id="legacyRecords" spellcheck="false" autocomplete="off" placeholder="手机号：对应手机号&#10;Token：对应的 Token"></textarea>
+        <button id="restoreCopied" type="button">保存为一个历史批次</button>
+        <p id="recoveryStatus" class="hint" role="status"></p>
+      </details>
+    </section>
+  </main>
+  <script>
+    const MOBILE_LOGIN_URL = 'https://testapi.youbao.cn/api/v1.login.login/mobile';
+    const PROFILE_UPDATE_URL = 'https://testapi.youbao.cn/api/v1.user.profile/update';
+    const REGISTRATION_STORAGE_KEY = 'youbao.batchRegistration.shared.records.v1';
+    function parsePhones(text) {
+      const seen = new Set();
+      return String(text).replace(/\r/g, '').split('\n').flatMap((value, index) => {
+        const input = value.trim();
+        if (!input) return [];
+        let numbers = [input];
+        const range = input.match(/^(1[3-9]\d{9})\s*[-–—~～]\s*(1[3-9]\d{9})$/);
+        if (range) {
+          const first = Number(range[1]);
+          const last = Number(range[2]);
+          if (last < first) return [{line: index + 1, phone: input, state: 'invalid', message: '结束手机号不能小于起始手机号'}];
+          if (last - first + 1 > 1000) return [{line: index + 1, phone: input, state: 'invalid', message: '单个区间最多 1000 个号码，请缩小范围'}];
+          numbers = Array.from({length: last - first + 1}, (_, offset) => String(first + offset));
+        }
+        return numbers.map(phone => {
+        let state = 'ready';
+        let message = '待提交';
+        if (!/^1[3-9]\d{9}$/.test(phone)) {
+          state = 'invalid'; message = '请输入 11 位大陆手机号';
+        } else if (seen.has(phone)) {
+          state = 'duplicate'; message = '重复号码，跳过';
+        } else {
+          seen.add(phone);
+        }
+        return {line: index + 1, phone, state, message};
+        });
+      });
+    }
+    async function sendAccountRequest(url, body, {signal, token, fetchImpl = fetch, timeoutMs = 20000} = {}) {
+      const request = new AbortController();
+      const abort = () => request.abort();
+      let timedOut = false;
+      if (signal?.aborted) return {state: 'ready', message: '待提交'};
+      signal?.addEventListener('abort', abort, {once: true});
+      const timer = setTimeout(() => {timedOut = true; request.abort();}, timeoutMs);
+      try {
+        const response = await fetchImpl(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'yb-client-os': 'android', 'yb-client-type': '6',
+            'yb-client-version': '1.0.0', 'yb-platform': '1',
+            ...(token ? {token, terminal: '1'} : {})
+          },
+          body: JSON.stringify(body),
+          signal: request.signal
+        });
+        const payload = await response.json().catch(() => null);
+        const message = typeof payload?.msg === 'string' ? payload.msg : '';
+        const blocked = [401, 403].includes(response.status) || /黑名单|封禁/.test(message);
+        const rateLimited = !blocked && (response.status === 429 || /频繁|频率|限流|too many requests|rate[ -]?limit/i.test(message));
+        if (blocked || rateLimited) {
+          const retryAfter = response.headers?.get?.('Retry-After');
+          const deadline = retryAfter && /^\d+(?:\.\d+)?$/.test(retryAfter)
+            ? Date.now() + Number(retryAfter) * 1000 : Date.parse(retryAfter || '');
+          return {state: 'failed', message: message || (blocked ? '账号或权限受限，请先处理后再登录' : '请求频率过快，请稍后重试'),
+            blocked, rateLimited, halt: true,
+            cooldownUntil: rateLimited ? Math.max(Date.now() + 5000, Number.isFinite(deadline) ? deadline : 0) : 0};
+        }
+        if (!response.ok || Number(payload?.code) !== 1) {
+          if (response.status >= 500 || payload?.code == null) {
+            return {state: 'uncertain', message: message || '响应异常，结果待核对'};
+          }
+          return {state: 'failed', message: message || `请求失败（HTTP ${response.status}）`, rateLimited: false, halt: false};
+        }
+        return {state: 'success', message, data: payload.data};
+      } catch (error) {
+        const reason = timedOut ? '请求超时' : signal?.aborted ? '已停止请求' : '网络或响应异常';
+        return {state: 'uncertain', message: `${reason}，结果待核对；不会自动重试`};
+      } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', abort);
+      }
+    }
+    async function loginMobile(mobile, options = {}) {
+      const result = await sendAccountRequest(MOBILE_LOGIN_URL,
+        {mobile, smsCode: options.smsCode, invite_code: '', terminal: 1}, options);
+      if (result.state !== 'success') return result;
+      const token = typeof result.data?.token === 'string' ? result.data.token.trim() : '';
+      if (!token) return {state: 'uncertain', message: '接口返回成功但缺少 Token，结果待核对'};
+      return {state: 'success', message: result.message || '登录成功', nickname: String(result.data?.nickname || ''), token};
+    }
+    async function updateNickname(phone, token, options = {}) {
+      const nickname = `${phone.slice(-4)}良子`;
+      const result = await sendAccountRequest(PROFILE_UPDATE_URL, {nickname}, {...options, token});
+      return {renameState: result.state === 'ready' ? 'pending' : result.state,
+        renameMessage: result.message || '保存成功',
+        ...(result.state === 'success' ? {nickname} : {}),
+        renameBlocked: result.blocked === true, halt: result.halt === true,
+        cooldownUntil: result.cooldownUntil || 0};
+    }
+    function waitBetweenRequests(ms, signal) {
+      return new Promise(resolve => {
+        let timer;
+        const done = () => {clearTimeout(timer); signal?.removeEventListener('abort', done); resolve();};
+        if (signal?.aborted) return resolve();
+        signal?.addEventListener('abort', done, {once: true});
+        timer = setTimeout(done, ms);
+      });
+    }
+    function failedEntries(entries) {
+      return entries.filter(entry => entry.state === 'failed' && !entry.blocked);
+    }
+    function retryDelay(entries) {
+      return entries.reduce((delay, entry) => Math.max(delay, (entry.cooldownUntil || 0) - Date.now()), 5000);
+    }
+    async function retryFailedEntries(entries, options = {}) {
+      if (!failedEntries(entries).length || options.signal?.aborted) return;
+      await waitBetweenRequests(retryDelay(options.cooldownEntries || entries), options.signal);
+      if (!options.signal?.aborted) await runRegistrationQueue(entries, {...options, retryFailed: true});
+    }
+    function nicknameEntries(entries) {
+      return entries.filter(entry => entry.state === 'success' && entry.token && entry.renameState !== 'success' && !entry.renameBlocked);
+    }
+    async function renameEntry(entry, {signal, rename = updateNickname, onChange = () => {}, intervalMs = 5000} = {}) {
+      if (signal?.aborted) return false;
+      entry.renameState = 'running'; entry.renameMessage = '正在修改昵称…'; entry.halt = false;
+      if (onChange() === false) {entry.renameState = 'pending'; entry.renameMessage = '等待改名'; return false;}
+      try {Object.assign(entry, await rename(entry.phone, entry.token, {signal}));}
+      catch (_) {entry.renameState = 'uncertain'; entry.renameMessage = '改名结果待核对';}
+      entry.cooldownUntil = Math.max(entry.cooldownUntil || 0, Date.now() + intervalMs);
+      return onChange() !== false && !signal?.aborted && !entry.halt && entry.renameState !== 'uncertain';
+    }
+    async function retryNicknameEntries(entries, options = {}) {
+      const selected = nicknameEntries(entries);
+      if (!selected.length || options.signal?.aborted) return;
+      await waitBetweenRequests(retryDelay(options.cooldownEntries || entries), options.signal);
+      for (const entry of selected) {
+        if (!await renameEntry(entry, options)) break;
+        await waitBetweenRequests(options.intervalMs ?? 5000, options.signal);
+      }
+    }
+    async function runRegistrationQueue(entries, {signal, login = loginMobile, rename = null, onChange = () => {}, intervalMs = 5000, retryFailed = false} = {}) {
+      for (const entry of entries) {
+        if (signal?.aborted) break;
+        if (retryFailed ? !(entry.state === 'failed' && !entry.blocked) : entry.state !== 'ready') continue;
+        const previousState = entry.state;
+        const previousMessage = entry.message;
+        entry.halt = false; entry.rateLimited = false;
+        entry.state = 'running'; entry.message = '正在登录…';
+        if (onChange() === false) {entry.state = previousState; entry.message = previousMessage; break;}
+        try {
+          Object.assign(entry, await login(entry.phone, {signal}));
+        } catch (_) {
+          entry.state = 'uncertain'; entry.message = '请求异常，结果待核对';
+        }
+        entry.submittedAt = new Date().toISOString();
+        entry.cooldownUntil = Math.max(entry.cooldownUntil || 0, Date.now() + intervalMs);
+        if (entry.state === 'success' && rename) {entry.renameState = 'pending'; entry.renameMessage = '等待改名';}
+        if (onChange() === false) break;
+        if (entry.state === 'uncertain' || entry.halt || signal?.aborted) break;
+        await waitBetweenRequests(intervalMs, signal);
+        if (entry.state === 'success' && rename) {
+          if (!await renameEntry(entry, {signal, rename, onChange, intervalMs})) break;
+          await waitBetweenRequests(intervalMs, signal);
+        }
+      }
+    }
+    function formatAccountTokens(items) {
+      return items.filter(item => item.state === 'success' && item.token)
+        .map(item => `手机号：${item.phone}\nToken：${item.token}`).join('\n\n');
+    }
+    function createRegistrationBatch() {
+      const now = new Date().toISOString();
+      return {id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, createdAt: now, updatedAt: now,
+        phones: '', batchStarted: false, entries: []};
+    }
+    function restoreRegistrationStore(raw) {
+      const store = JSON.parse(raw);
+      if (store?.version !== 1 || !Array.isArray(store.batches) || !store.batches.length) throw Error('保存记录格式不正确');
+      const ids = new Set();
+      const states = ['ready', 'running', 'success', 'failed', 'uncertain', 'invalid', 'duplicate'];
+      const batches = store.batches.map(batch => {
+        if (!batch || typeof batch.id !== 'string' || ids.has(batch.id) || !Array.isArray(batch.entries)) throw Error('保存批次格式不正确');
+        ids.add(batch.id);
+        const entries = batch.entries.map(item => {
+          if (!item || typeof item.phone !== 'string' || !states.includes(item.state)) throw Error('保存记录格式不正确');
+          const entry = {phone: item.phone, state: item.state, line: Number(item.line) || 1};
+          for (const key of ['message', 'nickname', 'token', 'renameMessage', 'submittedAt']) entry[key] = typeof item[key] === 'string' ? item[key] : '';
+          for (const key of ['rateLimited', 'halt', 'blocked', 'renameBlocked']) entry[key] = item[key] === true;
+          entry.cooldownUntil = Number.isFinite(item.cooldownUntil) ? item.cooldownUntil : 0;
+          if (['pending', 'running', 'success', 'failed', 'uncertain'].includes(item.renameState)) entry.renameState = item.renameState;
+          if (entry.state === 'running' || (entry.state === 'success' && !entry.token)) {
+            entry.state = 'uncertain'; entry.message = '上次请求未确认结果，请先核对；不会自动重试';
+          }
+          if (entry.renameState === 'running') {entry.renameState = 'uncertain'; entry.renameMessage = '上次改名未确认结果，可核对后手动重试';}
+          return entry;
+        });
+        return {id: batch.id, createdAt: String(batch.createdAt || ''), updatedAt: String(batch.updatedAt || ''),
+          sourceBatchId: typeof batch.sourceBatchId === 'string' ? batch.sourceBatchId : '',
+          phones: typeof batch.phones === 'string' ? batch.phones : entries.map(entry => entry.phone).join('\n'),
+          batchStarted: batch.batchStarted === true || entries.some(entry => !['ready', 'invalid', 'duplicate'].includes(entry.state)), entries};
+      });
+      return {version: 1, batches, activeId: ids.has(store.activeId) ? store.activeId : batches[batches.length - 1].id};
+    }
+    function writeRegistrationStore(storage, store, expectedRaw) {
+      if (storage.getItem(REGISTRATION_STORAGE_KEY) !== expectedRaw) throw Error('其他页面已更新记录，请先复制当前结果，再刷新加载，避免覆盖');
+      const raw = JSON.stringify(store);
+      storage.setItem(REGISTRATION_STORAGE_KEY, raw);
+      return raw;
+    }
+    function parseCopiedAccounts(text) {
+      const blocks = String(text).trim().split(/\r?\n\s*\r?\n/);
+      const seen = new Set();
+      return blocks.map((block, index) => {
+        const match = block.trim().match(/^手机号[：:]\s*(1[3-9]\d{9})\s*\r?\nToken[：:]\s*(\S+)\s*$/i);
+        if (!match) throw Error('复制内容格式不正确，请粘贴旧页面“复制全部账号和 Token”的完整内容');
+        if (seen.has(match[1])) throw Error('复制内容包含重复手机号，请核对后恢复');
+        seen.add(match[1]);
+        return {line: index + 1, phone: match[1], token: match[2], state: 'success', message: '从旧页面恢复（未重新登录）',
+          nickname: '', renameState: 'pending', renameMessage: '未执行改名'};
+      });
+    }
+    // 页面绑定
+    const phones = document.getElementById('phones');
+    const code = document.getElementById('code');
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const start = document.getElementById('start');
+    const stop = document.getElementById('stop');
+    const retry = document.getElementById('retryRateLimited');
+    const clear = document.getElementById('clear');
+    const clearPhones = document.getElementById('clearPhones');
+    const status = document.getElementById('connectionStatus');
+    const copyAll = document.getElementById('copyAllTokens');
+    const copyFallback = document.getElementById('copyFallback');
+    const copyFallbackText = document.getElementById('copyFallbackText');
+    const retryNickname = document.getElementById('retryNickname');
+    const storageStatus = document.getElementById('storageStatus');
+    const retrySave = document.getElementById('retrySave');
+    const batchHistory = document.getElementById('batchHistory');
+    const legacyRecords = document.getElementById('legacyRecords');
+    const restoreCopied = document.getElementById('restoreCopied');
+    const recoveryStatus = document.getElementById('recoveryStatus');
+    let entries = [];
+    let running = false;
+    let batchStarted = false;
+    let controller = null;
+    let lastSavedRaw = null;
+    let storageLocked = false;
+    let saveFailed = false;
+    const initialBatch = createRegistrationBatch();
+    let registrationStore = {version: 1, activeId: initialBatch.id, batches: [initialBatch]};
+    try {
+      lastSavedRaw = localStorage.getItem(REGISTRATION_STORAGE_KEY);
+      if (lastSavedRaw !== null) {
+        registrationStore = restoreRegistrationStore(lastSavedRaw);
+        status.textContent = '已恢复本地记录，没有自动提交请求。可切换历史批次，或手动继续未提交号码 / 重试失败项。';
+        storageStatus.textContent = '已恢复当前浏览器保存的记录和 Token。';
+      }
+    } catch (_) {
+      storageLocked = true;
+      storageStatus.className = 'hint failed';
+      storageStatus.textContent = '本地记录读取失败，已保留原数据、未覆盖；请勿清理浏览器数据。当前已暂停提交。';
+    }
+    function selectedBatch() {return registrationStore.batches.find(batch => batch.id === registrationStore.activeId);}
+    function protectProcessedPhones(items) {
+      // Editing creates linked snapshots. Check the whole family, in both
+      // directions, since a pending number may have finished in another snapshot.
+      const family = new Set([registrationStore.activeId]);
+      let expanded = true;
+      while (expanded) {
+        expanded = false;
+        for (const batch of registrationStore.batches) {
+          if (!batch.sourceBatchId || (!family.has(batch.id) && !family.has(batch.sourceBatchId))) continue;
+          for (const id of [batch.id, batch.sourceBatchId]) {
+            if (!family.has(id)) {family.add(id); expanded = true;}
+          }
+        }
+      }
+      const processed = new Set();
+      for (const batch of registrationStore.batches) {
+        if (batch.id === registrationStore.activeId || !family.has(batch.id)) continue;
+        for (const entry of batch.entries) {
+          if (!['ready', 'invalid', 'duplicate'].includes(entry.state)) processed.add(entry.phone);
+        }
+      }
+      return items.map(entry => entry.state === 'ready' && processed.has(entry.phone)
+        ? {...entry, state: 'duplicate', message: '关联批次已有处理记录，已跳过；请切换“已保存批次”查看或重试'} : entry);
+    }
+    function loadSelectedBatch() {
+      const batch = selectedBatch();
+      entries = protectProcessedPhones(batch.entries); batch.entries = entries;
+      batchStarted = batch.batchStarted; phones.value = batch.phones;
+      copyFallback.hidden = true; copyFallbackText.value = '';
+    }
+    function saveRecords() {
+      if (storageLocked) return false;
+      const batch = selectedBatch();
+      Object.assign(batch, {entries, phones: phones.value, batchStarted, updatedAt: new Date().toISOString()});
+      try {
+        lastSavedRaw = writeRegistrationStore(localStorage, registrationStore, lastSavedRaw);
+        saveFailed = false; retrySave.hidden = true; storageStatus.className = 'hint';
+        storageStatus.textContent = `已保存至当前浏览器 · ${registrationStore.batches.length} 个批次 · ${new Date().toLocaleTimeString()}`;
+        return true;
+      } catch (error) {
+        saveFailed = true; retrySave.hidden = false; storageStatus.className = 'hint failed';
+        storageStatus.textContent = `本地保存失败：${error.message || '浏览器存储不可用'}。请勿关闭或刷新，可先复制已有账号和 Token；提交已暂停。`;
+        return false;
+      }
+    }
+    function saveAndRender() {const saved = saveRecords(); renderPhones(); return saved;}
+    function renderHistory() {
+      batchHistory.replaceChildren();
+      for (const [index, batch] of registrationStore.batches.entries()) {
+        const option = document.createElement('option');
+        option.value = batch.id;
+        const date = new Date(batch.createdAt);
+        option.textContent = `${index + 1}. ${Number.isNaN(date.getTime()) ? '历史批次' : date.toLocaleString()} · ${batch.entries.length} 条 · 成功 ${batch.entries.filter(item => item.state === 'success').length}`;
+        batchHistory.appendChild(option);
+      }
+      batchHistory.value = registrationStore.activeId;
+      batchHistory.disabled = running || storageLocked;
+    }
+    loadSelectedBatch();
+    async function copyResult(text, message) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copyFallback.hidden = true; copyFallbackText.value = '';
+        status.textContent = message;
+      } catch (_) {
+        copyFallback.hidden = false; copyFallbackText.value = text;
+        copyFallbackText.focus({preventScroll: true}); copyFallbackText.select();
+        status.textContent = '浏览器未允许自动复制，内容已显示并选中，请按 Ctrl+C 复制。';
+      }
+    }
+    function renderPhones() {
+      renderHistory();
+      start.disabled = running || storageLocked || !entries.some(entry => entry.state === 'ready');
+      start.textContent = batchStarted ? '继续未提交号码' : '开始注册 / 登录';
+      stop.disabled = !running;
+      const retryCount = failedEntries(entries).length;
+      retry.disabled = running || storageLocked || retryCount === 0;
+      retry.textContent = retryCount ? `重试失败项（${retryCount}）` : '重试失败项';
+      const renameCount = nicknameEntries(entries).length;
+      retryNickname.disabled = running || storageLocked || renameCount === 0;
+      retryNickname.textContent = renameCount ? `补做 / 重试改名（${renameCount}）` : '补做 / 重试改名';
+      clear.disabled = running || storageLocked;
+      clearPhones.disabled = running || storageLocked || !phones.value;
+      restoreCopied.disabled = running || storageLocked;
+      legacyRecords.readOnly = running || storageLocked;
+      retrySave.disabled = running || storageLocked;
+      phones.readOnly = running || storageLocked;
+      code.readOnly = running || storageLocked;
+      copyAll.disabled = !entries.some(entry => entry.state === 'success' && entry.token);
+      rows.replaceChildren();
+      for (const [index, entry] of entries.entries()) {
+        const row = document.createElement('tr');
+        for (const value of [index + 1, entry.phone, entry.nickname || '—', entry.message]) {
+          const cell = document.createElement('td');
+          cell.textContent = String(value);
+          row.appendChild(cell);
+        }
+        row.lastElementChild.className = entry.state;
+        if (entry.state === 'success' && entry.renameState) {
+          const renameStatus = document.createElement('p');
+          renameStatus.className = `rename-status ${entry.renameState}`;
+          renameStatus.textContent = entry.renameMessage || (entry.renameState === 'success' ? '昵称已更新' : '等待改名');
+          row.children[2].appendChild(renameStatus);
+        }
+        const tokenCell = document.createElement('td');
+        if (entry.token) {
+          const tokenValue = document.createElement('textarea');
+          tokenValue.className = 'token-value'; tokenValue.readOnly = true; tokenValue.spellcheck = false;
+          tokenValue.value = entry.token;
+          tokenValue.setAttribute('aria-label', `${entry.phone} 的 Token`);
+          tokenCell.appendChild(tokenValue);
+          const actions = document.createElement('div'); actions.className = 'token-actions';
+          const copy = document.createElement('button');
+          copy.type = 'button'; copy.className = 'token-copy'; copy.textContent = '复制 Token';
+          copy.setAttribute('aria-label', `复制 ${entry.phone} 的 Token`);
+          copy.addEventListener('click', () => copyResult(entry.token, `${entry.phone} 的 Token 已复制`));
+          const copyAccount = document.createElement('button');
+          copyAccount.type = 'button'; copyAccount.textContent = '复制账号和 Token';
+          copyAccount.setAttribute('aria-label', `复制 ${entry.phone} 的账号和 Token`);
+          copyAccount.addEventListener('click', () => copyResult(formatAccountTokens([entry]), `${entry.phone} 的账号和 Token 已复制`));
+          actions.append(copy, copyAccount); tokenCell.appendChild(actions);
+        } else tokenCell.textContent = '—';
+        row.appendChild(tokenCell);
+        rows.appendChild(row);
+      }
+      if (!entries.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5; cell.className = 'empty'; cell.textContent = '填写手机号后显示待处理列表';
+        row.appendChild(cell); rows.appendChild(row);
+        summary.textContent = '尚未填写手机号';
+        return;
+      }
+      const count = state => entries.filter(entry => entry.state === state).length;
+      summary.textContent = `登录成功 ${count('success')} · 失败 ${count('failed')} · 待核对 ${count('uncertain')} · 待处理 ${count('ready')} · 改名成功 ${entries.filter(entry => entry.renameState === 'success').length} · 重复 ${count('duplicate')} · 格式错误 ${count('invalid')}`;
+    }
+    function editPhoneInput() {
+      if (running || storageLocked) {phones.value = selectedBatch().phones; return;}
+      if (phones.value === selectedBatch().phones) return;
+      if (batchStarted) {
+        if (saveFailed) {
+          // An unsaved API result may hold the only copy of a Token. Keep its
+          // result/copy controls visible until it is safely persisted.
+          const editedPhones = phones.value;
+          phones.value = selectedBatch().phones;
+          if (!saveRecords()) {
+            renderPhones();
+            status.textContent = '当前结果尚未保存，已保留原列表和 Token 复制入口。请先复制账号和 Token，或重新保存成功后再清空 / 修改。';
+            return;
+          }
+          phones.value = editedPhones;
+        }
+        // The input already contains the edit. Do not save it onto the original batch.
+        const original = selectedBatch();
+        const draft = createRegistrationBatch();
+        draft.sourceBatchId = original.id;
+        registrationStore.batches.push(draft); registrationStore.activeId = draft.id;
+        batchStarted = false;
+        copyFallback.hidden = true; copyFallbackText.value = '';
+      }
+      entries = protectProcessedPhones(parsePhones(phones.value));
+      if (saveAndRender()) status.textContent = selectedBatch().sourceBatchId
+        ? '已保存新的手机号列表，原批次的记录和 Token 已保留。未自动提交；原批次已处理的号码会跳过。'
+        : '已更新手机号列表，未自动提交任何请求。';
+    }
+    phones.addEventListener('input', editPhoneInput);
+    clearPhones.addEventListener('click', () => {
+      if (running || storageLocked) return;
+      phones.value = ''; editPhoneInput(); phones.focus({preventScroll: true});
+    });
+    copyAll.addEventListener('click', () => {
+      const text = formatAccountTokens(entries);
+      if (text) copyResult(text, '当前已成功的全部账号和 Token 已复制');
+    });
+    async function runBatch(mode = 'ready') {
+      if (running || storageLocked) return;
+      entries = protectProcessedPhones(entries); selectedBatch().entries = entries;
+      renderPhones();
+      const eligible = mode === 'rename' ? nicknameEntries(entries) : mode === 'failed' ? failedEntries(entries) : entries.filter(entry => entry.state === 'ready');
+      if (!eligible.length) return;
+      const smsCode = code.value.trim();
+      if (mode !== 'rename' && !/^\d{4,6}$/.test(smsCode)) {
+        status.textContent = '请先填写 4～6 位数字验证码。';
+        code.focus({preventScroll: true});
+        return;
+      }
+      if (!saveRecords()) return;
+      running = true; batchStarted = true; controller = new AbortController();
+      const cooldownEntries = registrationStore.batches.flatMap(batch => batch.entries);
+      const cooldown = cooldownEntries.reduce((time, entry) => Math.max(time, entry.cooldownUntil || 0), 0) - Date.now();
+      status.textContent = mode === 'rename'
+        ? '等待至少 5 秒后，只补做 / 重试改名，不会重新登录或更换 Token。'
+        : mode === 'failed' ? '等待至少 5 秒后重试失败项，每项只试一次；再次限流将暂停，成功账号不重复登录。'
+        : '正在逐条注册 / 登录并修改昵称，接口请求间隔至少 5 秒，请保持页面打开。';
+      if (cooldown > 5000) status.textContent += ` 接口等待时间剩余约 ${Math.ceil(cooldown / 1000)} 秒。`;
+      renderPhones();
+      try {
+        if (!saveRecords()) return;
+        if (mode === 'ready' && cooldown > 0) await waitBetweenRequests(cooldown, controller.signal);
+        const run = mode === 'rename' ? retryNicknameEntries : mode === 'failed' ? retryFailedEntries : runRegistrationQueue;
+        await run(entries, {signal: controller.signal, login: (mobile, options) => loginMobile(mobile, {...options, smsCode}),
+          rename: updateNickname, cooldownEntries, onChange: saveAndRender});
+      } finally {
+        running = false; controller = null;
+        const remaining = entries.filter(entry => entry.state === 'ready').length;
+        const uncertain = entries.some(entry => entry.state === 'uncertain');
+        const halted = entries.some(entry => entry.halt);
+        status.textContent = `${remaining ? `已暂停，还有 ${remaining} 个号码未提交。` : '本批处理完成。'}${halted ? ' 接口已限制请求，请按提示处理、等待限制解除后再继续。' : remaining ? ' 可点击继续处理未提交号码。' : ''}${uncertain ? ' 有请求结果待核对，不会批量重试这些号码。' : ''}${failedEntries(entries).length ? ' 可点击“重试失败项”，成功账号不会重复登录。' : ''}${nicknameEntries(entries).length ? ' 可单独补做 / 重试改名，已取得的 Token 保留。' : ''}`;
+        saveAndRender();
+      }
+    }
+    start.addEventListener('click', () => runBatch());
+    retry.addEventListener('click', () => runBatch('failed'));
+    retryNickname.addEventListener('click', () => runBatch('rename'));
+    stop.addEventListener('click', () => {
+      controller?.abort(); status.textContent = '正在停止，已发出的请求将核对返回结果。';
+    });
+    clear.addEventListener('click', () => {
+      if (running || storageLocked || !saveRecords()) return;
+      if (entries.length || phones.value.trim()) {
+        const batch = createRegistrationBatch();
+        registrationStore.batches.push(batch); registrationStore.activeId = batch.id;
+        loadSelectedBatch(); saveAndRender();
+      }
+      phones.focus({preventScroll: true});
+      status.textContent = '已保留历史批次，请填写下一批手机号。可在“已保存批次”中查看原记录。';
+    });
+    batchHistory.addEventListener('change', () => {
+      const id = batchHistory.value;
+      if (running || !saveRecords()) {batchHistory.value = registrationStore.activeId; return;}
+      registrationStore.activeId = id; loadSelectedBatch(); saveAndRender();
+      status.textContent = '已切换批次，未自动提交任何请求。';
+    });
+    retrySave.addEventListener('click', () => {if (!running) saveAndRender();});
+    restoreCopied.addEventListener('click', () => {
+      if (running || storageLocked) return;
+      let recovered;
+      try {recovered = parseCopiedAccounts(legacyRecords.value);}
+      catch (error) {recoveryStatus.textContent = error.message; return;}
+      if (!saveRecords()) return;
+      const batch = createRegistrationBatch();
+      Object.assign(batch, {entries: recovered, phones: recovered.map(entry => entry.phone).join('\n'), batchStarted: true});
+      registrationStore.batches.push(batch); registrationStore.activeId = batch.id;
+      loadSelectedBatch();
+      if (saveAndRender()) {
+        legacyRecords.value = '';
+        recoveryStatus.textContent = `已恢复并保存 ${recovered.length} 条成功记录，未调用接口。`;
+      } else recoveryStatus.textContent = '内容已载入但尚未保存成功，请先重新保存，不要关闭页面。';
+    });
+    window.addEventListener('beforeunload', event => {
+      if (running || saveFailed) {event.preventDefault(); event.returnValue = '';}
+    });
+    renderPhones();
+  </script>
+</body>
+</html>
